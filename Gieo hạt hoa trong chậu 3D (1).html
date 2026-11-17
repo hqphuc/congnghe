@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gieo hạt hoa trong chậu 3D</title>
+<style>
+:root{--bg:#f3f8ea;--fg:#1f2d1f;--card:#fffdf6;--line:#d5e5c0;--acc:#2e9e4f;--acc2:#eaf6df;--bad:#c93a2b;--on:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10180f;--fg:#eaf3e1;--card:#1b261a;--line:#34503a;--acc:#5cd17d;--acc2:#223a26;--bad:#ff8272;--on:#0b1a0e;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10180f;--fg:#eaf3e1;--card:#1b261a;--line:#34503a;--acc:#5cd17d;--acc2:#223a26;--bad:#ff8272;--on:#0b1a0e;color-scheme:dark}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+#app{height:100%;display:flex;flex-direction:column}
+#view{flex:1;min-height:0;position:relative;background:linear-gradient(#a9dcff,#e6f7cf)}
+canvas{display:block;touch-action:none}
+#top{position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.pill{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:20px;padding:3px 12px;font-weight:600}
+#panel{max-width:680px;width:100%;margin:0 auto;box-sizing:border-box;background:var(--card);border-top:2px solid var(--line);padding:10px 14px 12px;max-height:46%;overflow:auto}
+#panel p{margin:0 0 7px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.c,.btn{font:inherit;color:var(--fg);background:var(--acc2);border:1px solid var(--line);border-radius:12px;padding:8px 10px;cursor:pointer;text-align:left;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.c:focus-visible,.btn:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.c:disabled{opacity:.75;background:var(--line);cursor:default}
+.pri{background:var(--acc);color:var(--on);border-color:var(--acc);font-weight:700}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.good{color:var(--acc);font-weight:700}.bad{color:var(--bad);font-weight:700}
+.bar{position:relative;height:18px;border-radius:9px;background:var(--line);overflow:hidden;margin-bottom:6px}
+.bar i{position:absolute;inset:0 auto 0 0;background:#4aa3ff;width:0}
+.bar b{position:absolute;top:0;bottom:0;left:48%;width:28%;border:2px solid var(--acc);box-sizing:border-box;border-radius:6px}
+table{width:100%;border-collapse:collapse;margin-bottom:6px}td{padding:4px 6px;border-bottom:1px solid var(--line)}td:last-child{text-align:center;font-size:20px;width:48px}
+small{opacity:.8}
+#tip{position:absolute;pointer-events:none;display:none;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:2px 10px;font-weight:600;transform:translate(-50%,-150%);white-space:nowrap}
+.sh{animation:sh .35s}@keyframes sh{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@media (prefers-reduced-motion:reduce){.sh{animation:none}}
+</style></head>
+<body><div id="app"><div id="view"><div id="top"><span class="pill">🌱 Gieo hạt hoa trong chậu</span><span class="pill" id="st"></span></div><div id="tip"></div></div><div id="panel"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=s=>document.querySelector(s),T=THREE,V=(x,y,z)=>new T.Vector3(x,y,z);
+const R=new T.WebGLRenderer({antialias:true,alpha:true}),S=new T.Scene(),C=new T.PerspectiveCamera(40,1,.1,100);
+$('#view').prepend(R.domElement);R.shadowMap.enabled=true;
+S.add(new T.HemisphereLight(0xffffff,0x8fb070,.85));
+const sun=new T.DirectionalLight(0xffffff,.8);sun.position.set(4,9,6);sun.castShadow=true;S.add(sun);
+const M=(c,o)=>new T.MeshStandardMaterial(Object.assign({color:c,roughness:.75},o));
+const mk=(g,m,x=0,y=0,z=0,p=S)=>{const o=new T.Mesh(g,m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;p.add(o);return o};
+let yaw=.3,pit=.6,dist=12;
+const cam=()=>{C.position.set(Math.sin(yaw)*Math.cos(pit)*dist,Math.sin(pit)*dist+1,Math.cos(yaw)*Math.cos(pit)*dist);C.lookAt(0,1.2,0)};
+function size(){const v=$('#view'),w=v.clientWidth,h=v.clientHeight;R.setSize(w,h);C.aspect=w/h;C.updateProjectionMatrix();cam()}
+mk(new T.CylinderGeometry(7.5,7.5,.5,64),M(0xd9b27c),0,-.25,0);
+mk(new T.CylinderGeometry(10,10,.3,64),M(0x7cc36b),0,-.65,0);
+mk(new T.LatheGeometry([[0,0],[1,0],[1.5,.2],[1.85,2],[1.95,2.12],[1.55,2.12],[1.5,2],[1.45,.1],[0,.1]].map(p=>new T.Vector2(...p)),48),M(0xd2693c,{side:2}));
+const mS=M(0xa9794a),soil=mk(new T.CylinderGeometry(1.47,1.47,1,40),mS,0,.1,0);soil.visible=false;
+const cov=mk(new T.CylinderGeometry(1.47,1.47,.1,40),mS);cov.visible=false;
+const band=mk(new T.CylinderGeometry(1.46,1.46,.6,40,1,true),M(0x2ecc71,{transparent:true,opacity:.5,side:2}),0,1.3,0);band.visible=false;
+const setSoil=()=>{soil.visible=lv>0;soil.scale.y=Math.max(lv,.001);soil.position.y=.1+lv/2};
+// vật dụng 3D
+const IT={},REQ=['gang','xeng','hat','gia','binh'];
+const mm=(g,geo,c,x,y,z,rx=0,rz=0)=>{const o=mk(geo,M(c),x,y,z,g);o.rotation.set(rx,0,rz)};
+function item(id,name,x,z,b){const g=new T.Group();g.userData={id,name,tgt:V(x,0,z)};g.position.set(x,0,z);b(g);S.add(g);IT[id]=g}
+item('gang','găng tay làm vườn',-4.8,.8,g=>{mm(g,new T.BoxGeometry(.6,.14,.8),0xffffff,-.35,.07,0);mm(g,new T.BoxGeometry(.6,.14,.8),0xffffff,.35,.07,.1)});
+item('xeng','xẻng nhỏ',-3,3.8,g=>{mm(g,new T.CylinderGeometry(.07,.07,.9),0x3d8f4e,0,.1,.5,Math.PI/2);mm(g,new T.BoxGeometry(.5,.05,.7),0x9aa7b0,0,.1,-.3)});
+item('hat','gói hạt giống',-.9,4.4,g=>{mm(g,new T.BoxGeometry(.9,1.1,.15),0xf4d03f,0,.55,0);mm(g,new T.SphereGeometry(.22,12,8),0x4caf50,0,.6,.1)});
+item('gia','bao giá thể',1.2,4.2,g=>mm(g,new T.ConeGeometry(.8,.9,24),0x7b4a2a,0,.45,0));
+item('binh','bình phun sương',3.2,3.4,g=>{mm(g,new T.CylinderGeometry(.35,.4,.9,20),0xf08a24,0,.45,0);mm(g,new T.CylinderGeometry(.18,.18,.25,12),0xf08a24,0,1,0);mm(g,new T.BoxGeometry(.4,.12,.12),0xf08a24,.2,1.1,0)});
+item('bong','quả bóng đồ chơi',4.8,.8,g=>mm(g,new T.SphereGeometry(.4,16,12),0xe74c3c,0,.4,0));
+const rack=k=>V(-4+k*2,0,-4.6);
+function hold(id){for(const k of got)IT[k].userData.tgt=rack([...got].indexOf(k));if(id)IT[id].userData.tgt=V(3.2,2.6,1.4)}
+// hạt, hạt mầm, hạt nước
+const sp=new T.Group();S.add(sp);sp.visible=false;
+mm(sp,new T.CylinderGeometry(.05,.07,1,8),0x4caf50,0,.5,0);
+[-1,1].forEach(s=>{const l=mk(new T.SphereGeometry(.35,12,8),M(0x66bb6a),s*.35,.85,0,sp);l.scale.set(1,.25,.6);l.rotation.z=s*.5});
+mk(new T.SphereGeometry(.14,12,8),M(0xff6fa5),0,1.08,0,sp);
+const PT=[],pg=new T.SphereGeometry(.07,6,5),mSoil=M(0x7b4a2a),mWat=M(0x4aa3ff,{transparent:true,opacity:.8});
+function puff(m,n,spread,y){for(let i=0;i<n;i++){const o=new T.Mesh(pg,m);o.position.set((Math.random()-.5)*spread,y,(Math.random()-.5)*spread);o.userData.v=V((Math.random()-.5)*.02,-.05,0);S.add(o);PT.push(o)}}
+// trạng thái
+const ST=['Chuẩn bị vật liệu, vật dụng, dụng cụ','Cho giá thể vào chậu','Gieo hạt','Tưới nhẹ nước (dạng phun sương)'];
+const HINT=['Trước khi làm, em cần có đủ đồ dùng trong tay.','Đồ dùng đã sẵn sàng. Hạt cần nơi nào để bám rễ?','Giá thể đã vào chậu, giờ hãy đặt hạt vào.','Hạt đã nằm trong chậu rồi, chúng đang khát nước!'];
+const Q=['Ngâm hạt trong nước ấm (2 phần nước sôi + 3 phần nước lạnh) từ 2 đến 5 giờ','Ngâm hạt trong nước sôi 100°C khoảng 1 giờ','Gieo luôn hạt khô, không cần xử lí'];
+let cur=0,phase='pick',sub='',got=new Set(),done=new Set(),lv=0,seeds=[],moist=0,hd=false,grow=-1,msg='',F={soil:0,seed:0,water:0,clean:0,safe:0};
+let order=[0,1,2,3];do{order.sort(()=>Math.random()-.5)}while(order.join()=='0,1,2,3');
+const cmv=()=>(1.9-lv)/.2;
+function render(){
+ let h=msg?`<p>${msg}</p>`:'';
+ $('#st').textContent=cur<4?`Bước ${cur+1}/4`:cur==4?'Lưu ý':'Kết quả';
+ if(cur<4&&phase=='pick'){
+  if(!msg)h+='<p>Chọn <b>bước tiếp theo</b> đúng thứ tự gieo hạt. <small>Kéo màn hình 3D để xoay.</small></p>';
+  h+='<div class="cards">'+order.map(i=>`<button class="c" data-a="pick" data-v="${i}" ${done.has(i)?'disabled':''}>${done.has(i)?`✔ Bước ${i+1}. `:''}${ST[i]}</button>`).join('')+'</div>';
+ }else if(cur==0){
+  h+='<p><b>Bước 1.</b> Chạm vào các vật dụng cần thiết trong cảnh 3D (chậu đã có sẵn). Cẩn thận, có đồ không cần dùng!</p><p>'+REQ.map(k=>`<span class="${got.has(k)?'good':''}">${got.has(k)?'✔':'○'} ${IT[k].userData.name}</span>`).join(' &nbsp; ')+'</p>'+(got.size==5?'<button class="btn pri" data-a="next">Xong bước 1</button>':'');
+ }else if(cur==1){
+  const c=cmv(),ok=c>=1.99&&c<=5.01;
+  h+=`<p><b>Bước 2.</b> Xúc giá thể vào chậu đến khi giá thể cách miệng chậu <b>từ 2 cm đến 5 cm</b> (vùng xanh trong chậu).</p><p>Cách miệng chậu: <span class="${ok?'good':'bad'}">${c.toFixed(1)} cm</span></p><div class="row"><button class="btn" data-a="scoop">🥄 Xúc thêm</button><button class="btn" data-a="less">Xúc bớt</button><button class="btn pri" data-a="doneSoil">Xong</button></div>`;
+ }else if(cur==2){
+  if(sub=='q')h+='<p><b>Bước 3.</b> Trước khi gieo, em xử lí hạt giống thế nào cho đúng?</p><div class="cards">'+[1,0,2].map(i=>`<button class="c" data-a="ans" data-v="${i}">${Q[i]}</button>`).join('')+'</div>';
+  else h+=`<p><b>Bước 3.</b> Chạm vào mặt giá thể để đặt hạt (ít nhất 6 hạt, tối đa 14). Đã gieo: <b>${seeds.length}</b></p><button class="btn pri" data-a="cover">Lấp kín hạt bằng lớp giá thể mỏng</button>`;
+ }else if(cur==3){
+  h+='<p><b>Bước 4.</b> Nhấn giữ nút để tưới nhẹ (dạng phun sương). Dừng lại khi thanh nằm trong khung xanh. Mỗi ngày tưới một đến hai lần vào sáng sớm và chiều mát.</p><div class="bar"><i id="mb"></i><b></b></div><p id="mt"></p><div class="row"><button class="btn" data-hold="1" style="touch-action:none">💧 Nhấn giữ để phun sương</button><button class="btn pri" data-a="doneWater">Xong</button></div>';
+ }else if(cur==4){
+  h+='<p><b>Lưu ý.</b> Đảm bảo an toàn lao động và vệ sinh môi trường: thu dọn dụng cụ, vệ sinh sạch sẽ sau khi gieo hạt.</p><button class="btn pri" data-a="clean">🧹 Thu dọn dụng cụ và rửa tay</button>';
+ }else if(grow<2)h+='<p>⏳ Vài ngày sau… <b id="day">Ngày 1</b></p>';
+ else{
+  const f=n=>n==0?'😄':n==1?'😊':'😟',tot=Object.values(F).reduce((a,b)=>a+b,0),st=tot<=1?3:tot<=4?2:1;
+  h+='<p><b>Phiếu đánh giá sản phẩm</b></p><table>'+[['Giá thể cách miệng chậu từ 2 cm đến 5 cm',F.soil],['Hạt được lấp kín bởi một lớp giá thể mỏng',F.seed],['Giá thể được tưới đủ ẩm',F.water],['Vệ sinh sạch sẽ sau thực hành',F.clean],['Đảm bảo an toàn lao động',F.safe]].map(r=>`<tr><td>${r[0]}</td><td>${f(r[1])}</td></tr>`).join('')+`</table><p>${'⭐'.repeat(st)} Hạt đã nảy mầm! Hãy tiếp tục theo dõi, chăm sóc cây theo hướng dẫn của giáo viên.</p><button class="btn pri" onclick="location.reload()">Chơi lại</button>`;
+ }
+ $('#panel').innerHTML=h;
+}
+function shake(){const p=$('#panel');p.classList.remove('sh');void p.offsetWidth;p.classList.add('sh')}
+function go(){cur++;phase=cur<4?'pick':'do';msg=cur<4?'✅ Tuyệt! Giờ hãy chọn bước tiếp theo:':'';hold();band.visible=false;if(cur==5){grow=0;sp.visible=true;sp.position.y=.2+lv;seeds.forEach(s=>s.visible=false)}render()}
+const A={
+ pick(i){i=+i;if(i==cur){done.add(i);phase='do';msg='';sub='q';if(cur==1){hold('xeng');band.visible=true}if(cur==2)hold('hat');if(cur==3)hold('binh');render()}else{F.safe++;msg='❌ Chưa đúng. Gợi ý: '+HINT[cur];shake();render()}},
+ next(){go()},
+ scoop(){if(lv>=1.8)return;lv=+(lv+.2).toFixed(2);setSoil();puff(mSoil,14,.6,3.4);render()},
+ less(){if(lv<=0)return;lv=+(lv-.2).toFixed(2);F.clean++;setSoil();render()},
+ doneSoil(){const c=cmv();if(c>=1.99&&c<=5.01)go();else{F.soil++;msg=c<2?'❌ Giá thể quá đầy, hãy xúc bớt (cần cách miệng chậu 2 đến 5 cm).':'❌ Giá thể còn ít, hãy xúc thêm cho đến vùng xanh.';shake();render()}},
+ ans(v){if(v==0){sub='sow';msg='✅ Đúng rồi! Hạt đã xử lí xong.'}else{F.seed++;msg='❌ Chưa đúng. Hạt cần được ngâm nước ấm (2 phần nước sôi + 3 phần nước lạnh) 2 đến 5 giờ.';shake()}render()},
+ cover(){if(seeds.length<6){F.seed++;msg='❌ Hãy gieo ít nhất 6 hạt trước khi lấp.';shake();render();return}seeds.forEach(s=>s.visible=false);cov.visible=true;cov.position.y=.1+lv+.05;puff(mSoil,12,1.8,2.6);go()},
+ doneWater(){if(moist<60){F.water++;msg='❌ Giá thể chưa đủ ẩm, hãy tưới thêm.';shake();render()}else{if(moist>95)F.water++;go()}},
+ clean(){go()}
+};
+function tap(id){if(got.has(id))return;const o=IT[id];if(REQ.includes(id)){got.add(id);o.scale.setScalar(.85);o.userData.tgt=rack(got.size-1);msg='✔ Đã lấy: '+o.userData.name}else{F.safe++;msg='❌ '+o.userData.name+' không cần dùng ở đây.';shake()}render()}
+const RC=new T.Raycaster(),P=new T.Vector2();
+function pickAt(e){if(phase!='do')return;const r=R.domElement.getBoundingClientRect();P.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);RC.setFromCamera(P,C);
+ if(cur==0){const h=RC.intersectObjects(Object.values(IT),true)[0];if(h){let o=h.object;while(!o.userData.id)o=o.parent;tap(o.userData.id)}}
+ else if(cur==2&&sub=='sow'&&seeds.length<14){const h=RC.intersectObject(soil)[0];if(h&&h.face.normal.y>.9){const s=mk(new T.SphereGeometry(.09,10,8),M(0xf1d27a),h.point.x,h.point.y+.04,h.point.z);s.scale.set(1.3,.7,1);seeds.push(s);render()}}}
+function hover(e){const t=$('#tip');if(cur!=0||phase!='do'||e.pointerType=='touch'){t.style.display='none';cv.style.cursor='';return}
+ const r=cv.getBoundingClientRect();P.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);RC.setFromCamera(P,C);
+ const h=RC.intersectObjects(Object.values(IT),true)[0];if(!h){t.style.display='none';cv.style.cursor='';return}
+ let o=h.object;while(!o.userData.id)o=o.parent;const n=o.userData.name;
+ t.textContent=n[0].toUpperCase()+n.slice(1)+(got.has(o.userData.id)?' ✔':'');t.style.left=e.clientX-r.left+'px';t.style.top=e.clientY-r.top+'px';t.style.display='block';cv.style.cursor='pointer'}
+const cv=R.domElement;let dn=null;
+cv.addEventListener('pointerleave',()=>{$('#tip').style.display='none'});
+cv.addEventListener('pointerdown',e=>{dn={x:e.clientX,y:e.clientY,yaw,pit};cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',e=>{if(!dn){hover(e);return}$('#tip').style.display='none';yaw=dn.yaw-(e.clientX-dn.x)*.008;pit=Math.max(.15,Math.min(1.3,dn.pit+(e.clientY-dn.y)*.006));cam()});
+cv.addEventListener('pointerup',e=>{if(dn&&Math.hypot(e.clientX-dn.x,e.clientY-dn.y)<6)pickAt(e);dn=null});
+cv.addEventListener('wheel',e=>{dist=Math.max(7,Math.min(20,dist+e.deltaY*.01));cam()},{passive:true});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&!b.disabled)A[b.dataset.a](b.dataset.v)});
+document.addEventListener('pointerdown',e=>{if(e.target.closest('[data-hold]'))hd=true});
+addEventListener('pointerup',()=>hd=false);addEventListener('pointercancel',()=>hd=false);
+document.addEventListener('contextmenu',e=>e.preventDefault());
+addEventListener('resize',size);
+const dry=new T.Color(0xa9794a),wet=new T.Color(0x4a2f1c);let last=0;
+function loop(t){requestAnimationFrame(loop);const dt=Math.min((t-last)/1000,.05);last=t;
+ for(const k in IT){const o=IT[k];o.position.lerp(o.userData.tgt,.1);if(!got.has(k)&&cur==0)o.rotation.y+=.01}
+ if(hd&&cur==3&&phase=='do'){moist=Math.min(125,moist+dt*28);puff(mWat,2,1.6,3.6);mS.color.copy(dry).lerp(wet,Math.min(1,moist/100));
+  const b=$('#mb');if(b){b.style.width=moist*.8+'%';$('#mt').innerHTML=moist<60?'Giá thể còn khô, hãy tưới thêm.':moist<=95?'<span class="good">Đủ ẩm rồi! Có thể bấm Xong.</span>':'<span class="bad">Quá nhiều nước, giá thể bị úng!</span>'}}
+ for(let i=PT.length-1;i>=0;i--){const o=PT[i];o.position.add(o.userData.v);o.userData.v.y-=.004;if(o.position.y<.15+(soil.visible?lv:0)){S.remove(o);PT.splice(i,1)}}
+ if(cur==5&&grow>=0&&grow<1){grow=Math.min(1,grow+dt/4.5);const s=.3+.7*grow;sp.scale.set(s,Math.max(grow,.01),s);const d=$('#day');if(d)d.textContent='Ngày '+Math.max(1,Math.ceil(grow*7));if(grow>=1){grow=2;render()}}
+ R.render(S,C)}
+size();setSoil();render();requestAnimationFrame(loop);
+</script></body></html>
