@@ -8,14 +8,15 @@
 :root[data-theme="dark"]{--bg:#10180f;--fg:#eaf3e1;--card:#1b261a;--line:#34503a;--acc:#5cd17d;--acc2:#223a26;--bad:#ff8272;--on:#0b1a0e;color-scheme:dark}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,"Segoe UI",Roboto,sans-serif;overflow:hidden}
-#app{height:100%;display:flex;flex-direction:column}
-#view{flex:1;min-height:0;position:relative;background:linear-gradient(#a9dcff,#e6f7cf)}
+#app{height:100%;position:relative;overflow:hidden}
+#view{position:absolute;inset:0;background:linear-gradient(#a9dcff,#e6f7cf)}
 canvas{display:block;touch-action:none}
 #top{position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
 .pill{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:20px;padding:3px 12px;font-weight:600}
-#panel{max-width:680px;width:100%;margin:0 auto;box-sizing:border-box;background:var(--card);border-top:2px solid var(--line);padding:10px 14px 12px;max-height:46%;overflow:auto}
+#panel{position:absolute;left:12px;top:56px;width:min(380px,42vw);max-height:calc(100% - 70px);box-sizing:border-box;background:var(--card);background:color-mix(in srgb,var(--card) 82%,transparent);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);border:1px solid var(--line);border-radius:16px;padding:12px 14px;overflow:auto;font-size:16px}
+@media (max-width:640px){#panel{left:8px;right:8px;top:auto;bottom:12px;width:auto;max-height:44%;font-size:15px}}
 #panel p{margin:0 0 7px}
-.cards{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cards{display:grid;grid-template-columns:1fr;gap:6px}
 .c,.btn{font:inherit;color:var(--fg);background:var(--acc2);border:1px solid var(--line);border-radius:12px;padding:8px 10px;cursor:pointer;text-align:left;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .c:focus-visible,.btn:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 .c:disabled{opacity:.75;background:var(--line);cursor:default}
@@ -41,9 +42,11 @@ S.add(new T.HemisphereLight(0xffffff,0x8fb070,.85));
 const sun=new T.DirectionalLight(0xffffff,.8);sun.position.set(4,9,6);sun.castShadow=true;S.add(sun);
 const M=(c,o)=>new T.MeshStandardMaterial(Object.assign({color:c,roughness:.75},o));
 const mk=(g,m,x=0,y=0,z=0,p=S)=>{const o=new T.Mesh(g,m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;p.add(o);return o};
-let yaw=.3,pit=.6,dist=12;
+let yaw=.3,pit=.6,dist=13;
 const cam=()=>{C.position.set(Math.sin(yaw)*Math.cos(pit)*dist,Math.sin(pit)*dist+1,Math.cos(yaw)*Math.cos(pit)*dist);C.lookAt(0,1.2,0)};
-function size(){const v=$('#view'),w=v.clientWidth,h=v.clientHeight;R.setSize(w,h);C.aspect=w/h;C.updateProjectionMatrix();cam()}
+function size(){const v=$('#view'),w=v.clientWidth,h=v.clientHeight;R.setSize(w,h);C.aspect=w/h;
+ if(w>640)C.setViewOffset(w,h,-(Math.min(380,w*.42)/2+6),0,w,h);else C.clearViewOffset();
+ C.updateProjectionMatrix();cam()}
 mk(new T.CylinderGeometry(7.5,7.5,.5,64),M(0xd9b27c),0,-.25,0);
 mk(new T.CylinderGeometry(10,10,.3,64),M(0x7cc36b),0,-.65,0);
 mk(new T.LatheGeometry([[0,0],[1,0],[1.5,.2],[1.85,2],[1.95,2.12],[1.55,2.12],[1.5,2],[1.45,.1],[0,.1]].map(p=>new T.Vector2(...p)),48),M(0xd2693c,{side:2}));
@@ -77,7 +80,19 @@ const Q=['Ngâm hạt trong nước ấm (2 phần nước sôi + 3 phần nư�
 let cur=0,phase='pick',sub='',got=new Set(),done=new Set(),lv=0,seeds=[],moist=0,hd=false,grow=-1,msg='',F={soil:0,seed:0,water:0,clean:0,safe:0};
 let order=[0,1,2,3];do{order.sort(()=>Math.random()-.5)}while(order.join()=='0,1,2,3');
 const cmv=()=>(1.9-lv)/.2;
-function render(){
+let qz=null;const QZ=[
+['Thứ tự đúng các bước gieo hạt hoa, cây cảnh trong chậu là gì?',['Chuẩn bị vật liệu, cho giá thể vào chậu, gieo hạt, tưới nước','Gieo hạt, chuẩn bị vật liệu, tưới nước, cho giá thể vào chậu','Tưới nước, cho giá thể vào chậu, chuẩn bị vật liệu, gieo hạt','Cho giá thể vào chậu, tưới nước, gieo hạt, chuẩn bị vật liệu']],
+['Giá thể trong chậu cần cách miệng chậu bao nhiêu?',['Từ 2 cm đến 5 cm','Từ 8 cm đến 10 cm','Đầy sát miệng chậu']],
+['Ngâm hạt giống trong nước ấm cần pha theo tỉ lệ nào?',['2 phần nước sôi + 3 phần nước lạnh','3 phần nước sôi + 2 phần nước lạnh','Toàn bộ là nước sôi']],
+['Nên ngâm hạt giống trong bao lâu trước khi gieo?',['Từ 2 giờ đến 5 giờ','Khoảng 10 phút','Hơn 2 ngày']],
+['Sau khi gieo hạt cần làm gì?',['Lấp kín hạt bằng một lớp giá thể mỏng','Để hạt lộ hết trên mặt giá thể','Chôn hạt thật sâu dưới đáy chậu']],
+['Cách tưới nước cho hạt mới gieo là gì?',['Tưới nhẹ dạng phun sương, mỗi ngày một đến hai lần vào sáng sớm và chiều mát','Đổ thật nhiều nước một lần cho ngập chậu','Tưới mạnh giữa trưa nắng gắt']],
+['Việc nào giúp đảm bảo an toàn lao động và vệ sinh khi gieo hạt?',['Đeo găng tay, thu dọn dụng cụ và vệ sinh sạch sẽ sau khi làm','Để đất vương vãi, bỏ dụng cụ lại chỗ làm','Không cần đeo găng tay']]];
+function rq(){const z=qz,n=QZ.length;$('#st').textContent='Ôn bài';let h;
+ if(z.i>=n)h=`<p><b>Kết quả ôn bài:</b> ${z.s}/${n} câu đúng ${'⭐'.repeat(z.s>=6?3:z.s>=4?2:1)}</p><div class="row"><button class="btn pri" data-a="quiz">Ôn lại</button><button class="btn" onclick="location.reload()">Chơi lại</button></div>`;
+ else{const q=QZ[z.i];h=`<p><small>Câu ${z.i+1}/${n}</small><br><b>${q[0]}</b></p>`+(z.f?`<p>${z.f}</p><button class="btn pri" data-a="qnext">${z.i+1<n?'Câu tiếp theo':'Xem kết quả'}</button>`:'<div class="cards" style="grid-template-columns:1fr">'+z.o[z.i].map(j=>`<button class="c" data-a="qans" data-v="${j}">${q[1][j]}</button>`).join('')+'</div>')}
+ $('#panel').innerHTML=h}
+function render(){if(qz){rq();return}
  let h=msg?`<p>${msg}</p>`:'';
  $('#st').textContent=cur<4?`Bước ${cur+1}/4`:cur==4?'Lưu ý':'Kết quả';
  if(cur<4&&phase=='pick'){
@@ -98,7 +113,7 @@ function render(){
  }else if(grow<2)h+='<p>⏳ Vài ngày sau… <b id="day">Ngày 1</b></p>';
  else{
   const f=n=>n==0?'😄':n==1?'😊':'😟',tot=Object.values(F).reduce((a,b)=>a+b,0),st=tot<=1?3:tot<=4?2:1;
-  h+='<p><b>Phiếu đánh giá sản phẩm</b></p><table>'+[['Giá thể cách miệng chậu từ 2 cm đến 5 cm',F.soil],['Hạt được lấp kín bởi một lớp giá thể mỏng',F.seed],['Giá thể được tưới đủ ẩm',F.water],['Vệ sinh sạch sẽ sau thực hành',F.clean],['Đảm bảo an toàn lao động',F.safe]].map(r=>`<tr><td>${r[0]}</td><td>${f(r[1])}</td></tr>`).join('')+`</table><p>${'⭐'.repeat(st)} Hạt đã nảy mầm! Hãy tiếp tục theo dõi, chăm sóc cây theo hướng dẫn của giáo viên.</p><button class="btn pri" onclick="location.reload()">Chơi lại</button>`;
+  h+='<p><b>Phiếu đánh giá sản phẩm</b></p><table>'+[['Giá thể cách miệng chậu từ 2 cm đến 5 cm',F.soil],['Hạt được lấp kín bởi một lớp giá thể mỏng',F.seed],['Giá thể được tưới đủ ẩm',F.water],['Vệ sinh sạch sẽ sau thực hành',F.clean],['Đảm bảo an toàn lao động',F.safe]].map(r=>`<tr><td>${r[0]}</td><td>${f(r[1])}</td></tr>`).join('')+`</table><p>${'⭐'.repeat(st)} Hạt đã nảy mầm! Hãy tiếp tục theo dõi, chăm sóc cây theo hướng dẫn của giáo viên.</p><div class="row"><button class="btn pri" data-a="quiz">📝 Ôn bài (7 câu)</button><button class="btn" onclick="location.reload()">Chơi lại</button></div>`;
  }
  $('#panel').innerHTML=h;
 }
@@ -115,6 +130,7 @@ const A={
  doneWater(){if(moist<60){F.water++;msg='❌ Giá thể chưa đủ ẩm, hãy tưới thêm.';shake();render()}else{if(moist>95)F.water++;go()}},
  clean(){go()}
 };
+Object.assign(A,{quiz(){qz={i:0,s:0,f:'',o:QZ.map(q=>q[1].map((_,i)=>i).sort(()=>Math.random()-.5))};rq()},qans(v){if(qz.f)return;if(v==0){qz.s++;qz.f='✅ Chính xác!'}else qz.f='❌ Chưa đúng. Đáp án đúng: '+QZ[qz.i][1][0];rq()},qnext(){qz.i++;qz.f='';rq()}});
 function tap(id){if(got.has(id))return;const o=IT[id];if(REQ.includes(id)){got.add(id);o.scale.setScalar(.85);o.userData.tgt=rack(got.size-1);msg='✔ Đã lấy: '+o.userData.name}else{F.safe++;msg='❌ '+o.userData.name+' không cần dùng ở đây.';shake()}render()}
 const RC=new T.Raycaster(),P=new T.Vector2();
 function pickAt(e){if(phase!='do')return;const r=R.domElement.getBoundingClientRect();P.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);RC.setFromCamera(P,C);
