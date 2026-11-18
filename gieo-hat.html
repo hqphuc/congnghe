@@ -31,55 +31,75 @@ small{opacity:.8}
 #tip{position:absolute;pointer-events:none;display:none;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:2px 10px;font-weight:600;transform:translate(-50%,-150%);white-space:nowrap}
 .sh{animation:sh .35s}@keyframes sh{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 @media (prefers-reduced-motion:reduce){.sh{animation:none}}
+#ov{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:rgba(10,20,40,.6);color:#fff;font-size:24px;font-weight:700;pointer-events:none}
 </style></head>
-<body><div id="app"><div id="view"><div id="top"><span class="pill">🌱 Gieo hạt hoa trong chậu</span><span class="pill" id="st"></span></div><div id="tip"></div></div><div id="panel"></div></div>
+<body><div id="app"><div id="view"><div id="top"><span class="pill">🌱 Gieo hạt hoa trong chậu</span><span class="pill" id="st"></span></div><div id="tip"></div><div id="ov"><div id="clk" style="font-size:72px">🕐</div><div id="ot"></div><div>Thời gian tua nhanh…</div></div></div><div id="panel"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const $=s=>document.querySelector(s),T=THREE,V=(x,y,z)=>new T.Vector3(x,y,z);
+let cur=0,phase='pick',sub='',got=new Set(),done=new Set(),lv=0,seeds=[],moist=0,hd=false,grow=-1,msg='',held=null,loaded=false,hot=0,cold=0,nk='',busy=false,goal=null,hsc=null,NC=null;
+const F={soil:0,seed:0,mix:0,water:0,clean:0,safe:0};
 const R=new T.WebGLRenderer({antialias:true,alpha:true}),S=new T.Scene(),C=new T.PerspectiveCamera(40,1,.1,100);
 $('#view').prepend(R.domElement);R.shadowMap.enabled=true;
 S.add(new T.HemisphereLight(0xffffff,0x8fb070,.85));
-const sun=new T.DirectionalLight(0xffffff,.8);sun.position.set(4,9,6);sun.castShadow=true;S.add(sun);
+const sun=new T.DirectionalLight(0xffffff,.8);sun.position.set(6,14,9);sun.castShadow=true;Object.assign(sun.shadow.camera,{left:-18,right:18,top:18,bottom:-18,far:40});sun.shadow.camera.updateProjectionMatrix();sun.shadow.mapSize.set(2048,2048);S.add(sun);
 const M=(c,o)=>new T.MeshStandardMaterial(Object.assign({color:c,roughness:.75},o));
 const mk=(g,m,x=0,y=0,z=0,p=S)=>{const o=new T.Mesh(g,m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;p.add(o);return o};
-let yaw=.3,pit=.6,dist=13;
-const cam=()=>{C.position.set(Math.sin(yaw)*Math.cos(pit)*dist,Math.sin(pit)*dist+1,Math.cos(yaw)*Math.cos(pit)*dist);C.lookAt(0,1.2,0)};
-function size(){const v=$('#view'),w=v.clientWidth,h=v.clientHeight;R.setSize(w,h);C.aspect=w/h;
- if(w>640)C.setViewOffset(w,h,-(Math.min(380,w*.42)/2+6),0,w,h);else C.clearViewOffset();
- C.updateProjectionMatrix();cam()}
-mk(new T.CylinderGeometry(7.5,7.5,.5,64),M(0xd9b27c),0,-.25,0);
-mk(new T.CylinderGeometry(10,10,.3,64),M(0x7cc36b),0,-.65,0);
+const mm=(g,geo,c,x,y,z,rx=0,rz=0)=>{const o=mk(geo,M(c),x,y,z,g);o.rotation.set(rx,0,rz);return o};
+function size(){const v=$('#view'),w=v.clientWidth,h=v.clientHeight;R.setSize(w,h);C.aspect=w/h;if(w>640)C.setViewOffset(w,h,-(Math.min(380,w*.42)/2+6),0,w,h);else C.clearViewOffset();C.updateProjectionMatrix()}
+// khu vườn
+mk(new T.CylinderGeometry(30,30,.4,48),M(0x7cc36b),0,-.2,0);
+mk(new T.BoxGeometry(14,.08,8),M(0xe8d3a0),1.5,.04,0);
+mk(new T.BoxGeometry(9,4.5,5),M(0xfff0cf),-4,2.25,-12);
+const roof=mk(new T.ConeGeometry(7.4,2.6,4),M(0xc0563a),-4,5.8,-12);roof.rotation.y=Math.PI/4;
+mk(new T.BoxGeometry(1.3,2.4,.2),M(0x8b5a2b),-4,1.2,-9.45);
+[-7,-1].forEach(x=>mk(new T.BoxGeometry(1.4,1.2,.2),M(0x8fd3ff),x,2.6,-9.45));
+[[-12,-4],[12,-6],[13,8],[-13,9]].forEach(([x,z])=>{mk(new T.CylinderGeometry(.3,.4,2),M(0x8b5a2b),x,1,z);mk(new T.SphereGeometry(1.6,14,10),M(0x3e9b4f),x,3.2,z)});
+for(let i=0;i<18;i++){const x=(Math.random()-.5)*26,z=-6+Math.random()*19;if(x>-5.5&&x<8.5&&Math.abs(z)<4.5)continue;mk(new T.SphereGeometry(.14,6,5),M([0xff6fa5,0xffd54f,0xba68c8,0xffffff][i%4]),x,.14,z)}
+const ORG=V(0,0,0),BAG=V(-3.5,0,.3),KET=V(4.2,0,-2.2),BUC=V(4.2,0,2.2),BWL=V(6.5,0,0);
 mk(new T.LatheGeometry([[0,0],[1,0],[1.5,.2],[1.85,2],[1.95,2.12],[1.55,2.12],[1.5,2],[1.45,.1],[0,.1]].map(p=>new T.Vector2(...p)),48),M(0xd2693c,{side:2}));
 const mS=M(0xa9794a),soil=mk(new T.CylinderGeometry(1.47,1.47,1,40),mS,0,.1,0);soil.visible=false;
 const cov=mk(new T.CylinderGeometry(1.47,1.47,.1,40),mS);cov.visible=false;
 const band=mk(new T.CylinderGeometry(1.46,1.46,.6,40,1,true),M(0x2ecc71,{transparent:true,opacity:.5,side:2}),0,1.3,0);band.visible=false;
 const setSoil=()=>{soil.visible=lv>0;soil.scale.y=Math.max(lv,.001);soil.position.y=.1+lv/2};
-// vật dụng 3D
+// nhân vật
+const hero=new T.Group();S.add(hero);hero.position.set(0,0,5);hero.scale.setScalar(1.7);
+const hp=(g,c,x,y,z)=>mk(g,M(c),x,y,z,hero);
+hp(new T.CylinderGeometry(.27,.3,.7,16),0x3a7bd5,0,.95,0);hp(new T.SphereGeometry(.26,16,12),0xffd2a8,0,1.55,0);hp(new T.SphereGeometry(.28,16,8,0,6.3,0,1.5),0x2b2118,0,1.58,0);
+const scf=hp(new T.TorusGeometry(.22,.06,8,16),0xe53935,0,1.3,0);scf.rotation.x=Math.PI/2;
+const limb=(x,y,len,r,c)=>{const g=new T.Group();g.position.set(x,y,0);mk(new T.CylinderGeometry(r,r,len,8),M(c),0,-len/2,0,g);hero.add(g);return g};
+const legL=limb(-.13,.6,.6,.09,0x2c3e66),legR=limb(.13,.6,.6,.09,0x2c3e66),armL=limb(-.36,1.25,.6,.07,0xffd2a8),armR=limb(.36,1.25,.6,.07,0xffd2a8);
+const hand=new T.Group();hand.position.set(0,-.6,.25);armR.add(hand);
+// vật dụng
+const BLD={
+ gang:g=>{mm(g,new T.BoxGeometry(.6,.14,.8),0xffffff,-.35,.07,0);mm(g,new T.BoxGeometry(.6,.14,.8),0xffffff,.35,.07,.1)},
+ xeng:g=>{mm(g,new T.CylinderGeometry(.07,.07,.9),0x3d8f4e,0,.1,.5,Math.PI/2);mm(g,new T.BoxGeometry(.5,.05,.7),0x9aa7b0,0,.1,-.3);const b=mm(g,new T.SphereGeometry(.25,10,8),0x7b4a2a,0,.22,-.3);b.name='sc';b.visible=false},
+ hat:g=>{mm(g,new T.BoxGeometry(.9,1.1,.15),0xf4d03f,0,.55,0);mm(g,new T.SphereGeometry(.22,12,8),0x4caf50,0,.6,.1)},
+ gia:g=>mm(g,new T.ConeGeometry(.8,.9,24),0x7b4a2a,0,.45,0),
+ binh:g=>{mm(g,new T.CylinderGeometry(.35,.4,.9,20),0xf08a24,0,.45,0);mm(g,new T.CylinderGeometry(.18,.18,.25,12),0xf08a24,0,1,0);mm(g,new T.BoxGeometry(.4,.12,.12),0xf08a24,.2,1.1,0)},
+ bong:g=>mm(g,new T.SphereGeometry(.4,16,12),0xe74c3c,0,.4,0)};
+const NM={gang:'găng tay làm vườn',xeng:'xẻng nhỏ',hat:'gói hạt giống',gia:'bao giá thể',binh:'bình phun sương',bong:'quả bóng đồ chơi'};
+const mkItem=id=>{const g=new T.Group();BLD[id](g);g.userData={id};return g};
 const IT={},REQ=['gang','xeng','hat','gia','binh'];
-const mm=(g,geo,c,x,y,z,rx=0,rz=0)=>{const o=mk(geo,M(c),x,y,z,g);o.rotation.set(rx,0,rz)};
-function item(id,name,x,z,b){const g=new T.Group();g.userData={id,name,tgt:V(x,0,z)};g.position.set(x,0,z);b(g);S.add(g);IT[id]=g}
-item('gang','găng tay làm vườn',-4.8,.8,g=>{mm(g,new T.BoxGeometry(.6,.14,.8),0xffffff,-.35,.07,0);mm(g,new T.BoxGeometry(.6,.14,.8),0xffffff,.35,.07,.1)});
-item('xeng','xẻng nhỏ',-3,3.8,g=>{mm(g,new T.CylinderGeometry(.07,.07,.9),0x3d8f4e,0,.1,.5,Math.PI/2);mm(g,new T.BoxGeometry(.5,.05,.7),0x9aa7b0,0,.1,-.3)});
-item('hat','gói hạt giống',-.9,4.4,g=>{mm(g,new T.BoxGeometry(.9,1.1,.15),0xf4d03f,0,.55,0);mm(g,new T.SphereGeometry(.22,12,8),0x4caf50,0,.6,.1)});
-item('gia','bao giá thể',1.2,4.2,g=>mm(g,new T.ConeGeometry(.8,.9,24),0x7b4a2a,0,.45,0));
-item('binh','bình phun sương',3.2,3.4,g=>{mm(g,new T.CylinderGeometry(.35,.4,.9,20),0xf08a24,0,.45,0);mm(g,new T.CylinderGeometry(.18,.18,.25,12),0xf08a24,0,1,0);mm(g,new T.BoxGeometry(.4,.12,.12),0xf08a24,.2,1.1,0)});
-item('bong','quả bóng đồ chơi',4.8,.8,g=>mm(g,new T.SphereGeometry(.4,16,12),0xe74c3c,0,.4,0));
-const rack=k=>V(-4+k*2,0,-4.6);
-function hold(id){for(const k of got)IT[k].userData.tgt=rack([...got].indexOf(k));if(id)IT[id].userData.tgt=V(3.2,2.6,1.4)}
-// hạt, hạt mầm, hạt nước
+[['gang',-9,5],['xeng',8.5,6.5],['hat',-4,10.5],['gia',10,-4],['binh',3,11],['bong',-11,0]].forEach(([id,x,z])=>{const g=mkItem(id);g.position.set(x,0,z);g.scale.setScalar(1.3);const r=mk(new T.TorusGeometry(.9,.07,6,24),M(0xffd54f,{emissive:0x806000}),0,.05,0,g);r.rotation.x=Math.PI/2;S.add(g);IT[id]=g});
+function setHeld(id){held=id;while(hand.children.length)hand.remove(hand.children[0]);hsc=null;if(id){const g=mkItem(id);g.scale.setScalar(.6);if(id=='xeng')g.rotation.y=Math.PI;hand.add(g);hsc=g.getObjectByName('sc')||null}}
+// khu làm việc
+const WK=new T.Group(),WK2=new T.Group();S.add(WK,WK2);WK.visible=WK2.visible=false;
+const bag=mkItem('gia');bag.position.copy(BAG);bag.scale.setScalar(1.4);WK.add(bag);
+const kt=new T.Group();kt.position.copy(KET);mm(kt,new T.CylinderGeometry(.4,.45,.7,16),0xc0392b,0,.35,0);mm(kt,new T.BoxGeometry(.5,.1,.1),0xc0392b,.5,.55,0,0,.5);WK2.add(kt);
+const bk=new T.Group();bk.position.copy(BUC);mm(bk,new T.CylinderGeometry(.5,.4,.7,16),0x3498db,0,.35,0);WK2.add(bk);
+const bw=new T.Group();bw.position.copy(BWL);mk(new T.CylinderGeometry(.9,.6,.6,24,1,true),M(0xf5f0e6,{side:2}),0,.3,0,bw);mk(new T.CylinderGeometry(.6,.6,.05,24),M(0xf5f0e6),0,.025,0,bw);WK2.add(bw);
+const water=mk(new T.CylinderGeometry(.58,.58,1,20),M(0x4aa3ff,{transparent:true,opacity:.85}),0,.1,0,bw);water.visible=false;
+const bs=new T.Group();bs.visible=false;bw.add(bs);for(let i=0;i<8;i++){const s=mk(new T.SphereGeometry(.08,8,6),M(0xf1d27a),Math.cos(i*.8)*.1*(i%4+1),.5,Math.sin(i*.8)*.1*(i%4+1),bs);s.scale.set(1.3,.7,1)}
+function updW(){const n=hot+cold,h=Math.min(.5,n/5*.45)+.001;water.visible=n>0;water.scale.y=h;water.position.y=.05+h/2;water.material.color.set(0x4aa3ff).lerp(new T.Color(0xff7043),n?hot/n:0)}
+// mầm cây, hạt nước
 const sp=new T.Group();S.add(sp);sp.visible=false;
 mm(sp,new T.CylinderGeometry(.05,.07,1,8),0x4caf50,0,.5,0);
 [-1,1].forEach(s=>{const l=mk(new T.SphereGeometry(.35,12,8),M(0x66bb6a),s*.35,.85,0,sp);l.scale.set(1,.25,.6);l.rotation.z=s*.5});
 mk(new T.SphereGeometry(.14,12,8),M(0xff6fa5),0,1.08,0,sp);
 const PT=[],pg=new T.SphereGeometry(.07,6,5),mSoil=M(0x7b4a2a),mWat=M(0x4aa3ff,{transparent:true,opacity:.8});
 function puff(m,n,spread,y){for(let i=0;i<n;i++){const o=new T.Mesh(pg,m);o.position.set((Math.random()-.5)*spread,y,(Math.random()-.5)*spread);o.userData.v=V((Math.random()-.5)*.02,-.05,0);S.add(o);PT.push(o)}}
-// trạng thái
-const ST=['Chuẩn bị vật liệu, vật dụng, dụng cụ','Cho giá thể vào chậu','Gieo hạt','Tưới nhẹ nước (dạng phun sương)'];
-const HINT=['Trước khi làm, em cần có đủ đồ dùng trong tay.','Đồ dùng đã sẵn sàng. Hạt cần nơi nào để bám rễ?','Giá thể đã vào chậu, giờ hãy đặt hạt vào.','Hạt đã nằm trong chậu rồi, chúng đang khát nước!'];
-const Q=['Ngâm hạt trong nước ấm (2 phần nước sôi + 3 phần nước lạnh) từ 2 đến 5 giờ','Ngâm hạt trong nước sôi 100°C khoảng 1 giờ','Gieo luôn hạt khô, không cần xử lí'];
-let cur=0,phase='pick',sub='',got=new Set(),done=new Set(),lv=0,seeds=[],moist=0,hd=false,grow=-1,msg='',F={soil:0,seed:0,water:0,clean:0,safe:0};
-let order=[0,1,2,3];do{order.sort(()=>Math.random()-.5)}while(order.join()=='0,1,2,3');
-const cmv=()=>(1.9-lv)/.2;
+function spray(){const p=hero.position,a=hero.rotation.y,o=new T.Mesh(pg,mWat);o.position.set(p.x+Math.sin(a)*.9,2,p.z+Math.cos(a)*.9);o.userData.v=V(-o.position.x,.2+lv-o.position.y,-o.position.z).multiplyScalar(.05).add(V((Math.random()-.5)*.03,0,(Math.random()-.5)*.03));o.userData.g=0;S.add(o);PT.push(o)}
 let qz=null;const QZ=[
 ['Thứ tự đúng các bước gieo hạt hoa, cây cảnh trong chậu là gì?',['Chuẩn bị vật liệu, cho giá thể vào chậu, gieo hạt, tưới nước','Gieo hạt, chuẩn bị vật liệu, tưới nước, cho giá thể vào chậu','Tưới nước, cho giá thể vào chậu, chuẩn bị vật liệu, gieo hạt','Cho giá thể vào chậu, tưới nước, gieo hạt, chuẩn bị vật liệu']],
 ['Giá thể trong chậu cần cách miệng chậu bao nhiêu?',['Từ 2 cm đến 5 cm','Từ 8 cm đến 10 cm','Đầy sát miệng chậu']],
@@ -92,73 +112,109 @@ function rq(){const z=qz,n=QZ.length;$('#st').textContent='Ôn bài';let h;
  if(z.i>=n)h=`<p><b>Kết quả ôn bài:</b> ${z.s}/${n} câu đúng ${'⭐'.repeat(z.s>=6?3:z.s>=4?2:1)}</p><div class="row"><button class="btn pri" data-a="quiz">Ôn lại</button><button class="btn" onclick="location.reload()">Chơi lại</button></div>`;
  else{const q=QZ[z.i];h=`<p><small>Câu ${z.i+1}/${n}</small><br><b>${q[0]}</b></p>`+(z.f?`<p>${z.f}</p><button class="btn pri" data-a="qnext">${z.i+1<n?'Câu tiếp theo':'Xem kết quả'}</button>`:'<div class="cards" style="grid-template-columns:1fr">'+z.o[z.i].map(j=>`<button class="c" data-a="qans" data-v="${j}">${q[1][j]}</button>`).join('')+'</div>')}
  $('#panel').innerHTML=h}
+
+const ST=['Chuẩn bị vật liệu, vật dụng, dụng cụ','Cho giá thể vào chậu','Gieo hạt','Tưới nhẹ nước (dạng phun sương)'];
+const HINT=['Trước khi làm, em cần có đủ đồ dùng trong tay.','Đồ dùng đã sẵn sàng. Hạt cần nơi nào để bám rễ?','Giá thể đã vào chậu, giờ hãy xử lí rồi gieo hạt.','Hạt đã nằm trong chậu rồi, chúng đang khát nước!'];
+let order=[0,1,2,3];do{order.sort(()=>Math.random()-.5)}while(order.join()=='0,1,2,3');
+const cmv=()=>(1.9-lv)/.2;
+const wtxt=()=>moist<60?'Giá thể còn khô, hãy tưới thêm từng chút một.':moist<=95?'<span class="good">Đủ ẩm rồi! Có thể bấm Xong.</span>':'<span class="bad">Quá nhiều nước, giá thể bị úng!</span>';
+function cands(){if(phase!='do'||busy||qz||cur>3)return[];const c=[],add=(k,n,p,r,a)=>c.push({k,n,p,r,a});
+ if(cur==0)Object.keys(IT).forEach(k=>{if(!got.has(k))add(k,NM[k],IT[k].position,1.8,[['Nhặt: '+NM[k],()=>take(k)]])});
+ else if(cur==1||(cur==2&&sub=='cover')){
+  add('bag','Bao giá thể',BAG,2.3,[[loaded?'Đổ giá thể lại bao':'🥄 Múc giá thể',()=>{loaded=!loaded;render()}]]);
+  const a=[];if(cur==1){if(loaded)a.push(['Đổ giá thể vào chậu',pour]);else if(lv>0)a.push(['Múc bớt giá thể ra',less])}else if(loaded)a.push(['Phủ lớp giá thể mỏng lên hạt',cover]);
+  add('pot','Chậu',ORG,3.2,a)}
+ else if(cur==2&&sub=='mix'){
+  add('ket','Ấm nước sôi',KET,1.9,[['♨ Rót nước sôi (+1 phần)',()=>{hot++;updW();render()}]]);
+  add('buc','Xô nước lạnh',BUC,1.9,[['❄ Rót nước lạnh (+1 phần)',()=>{cold++;updW();render()}]]);
+  const a=[];if(hot==2&&cold==3)a.push(['Thả hạt vào bát nước ấm',()=>{sub='soak';bs.visible=true;render()}]);
+  if(hot+cold)a.push(['Đổ bỏ, pha lại',()=>{if(hot>2||cold>3)F.mix++;hot=cold=0;updW();render()}]);add('bwl','Bát ngâm hạt',BWL,1.9,a)}
+ else if(cur==2&&sub=='take')add('bwl','Bát hạt đã ngâm',BWL,1.9,[['Lấy hạt đã ngâm',()=>{sub='sow';bs.visible=false;setHeld('hat');msg='';render()}]]);
+ else if(cur==2&&sub=='sow')add('pot','Chậu',ORG,3.2,seeds.length<14?[['Gieo hạt (+2 hạt)',sow]]:[]);
+ else if(cur==3)add('pot','Chậu',ORG,3.2,[]);
+ return c}
+function near(){let b=null,bd=1e9;for(const c of cands()){const d=Math.hypot(c.p.x-hero.position.x,c.p.z-hero.position.z);if(d<c.r&&d<bd){b=c;bd=d}}return b}
+function take(k){const o=IT[k];if(REQ.includes(k)){got.add(k);o.visible=false;msg='✔ Đã nhặt: '+NM[k]}else{F.safe++;msg='❌ '+NM[k]+' không cần dùng ở đây.';shake()}render()}
+function pour(){if(lv>=1.8){msg='Chậu đã đầy rồi!';render();return}lv=+(lv+.2).toFixed(2);loaded=false;setSoil();puff(mSoil,10,.8,2.6);msg='';render()}
+function less(){lv=+(lv-.2).toFixed(2);loaded=true;F.clean++;setSoil();msg='';render()}
+function sow(){for(let i=0;i<2&&seeds.length<14;i++){const a=Math.random()*6.28,r=Math.sqrt(Math.random())*1.05,s=mk(new T.SphereGeometry(.09,10,8),M(0xf1d27a),Math.cos(a)*r,.14+lv,Math.sin(a)*r);s.scale.set(1.3,.7,1);seeds.push(s)}render()}
+function cover(){seeds.forEach(s=>s.visible=false);cov.visible=true;cov.position.y=.15+lv;loaded=false;puff(mSoil,12,1.6,2.6);go()}
+function timelapse(){busy=true;const o=$('#ov'),CL=[...'🕐🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛'];o.style.display='flex';let m=0;
+ const iv=setInterval(()=>{m+=4;$('#clk').textContent=CL[Math.floor(m/10)%12];$('#ot').textContent=`+${Math.floor(m/60)} giờ ${String(m%60).padStart(2,'0')} phút`;
+  if(m>=120){clearInterval(iv);setTimeout(()=>{o.style.display='none';busy=false;sub='take';msg='⏰ Đã qua 2 giờ! Hãy tới bát nước và lấy hạt ra.';render()},500)}},70)}
+function go(){cur++;phase=cur<4?'pick':'do';msg=cur<4?'✅ Tuyệt! Giờ hãy chọn bước tiếp theo:':'';band.visible=false;setHeld(null);loaded=false;WK.visible=cur>=1&&cur<5;WK2.visible=cur>=2&&cur<5;
+ if(cur==5){grow=0;sp.visible=true;sp.position.y=.2+lv;seeds.forEach(s=>s.visible=false)}render()}
+function shake(){const p=$('#panel');p.classList.remove('sh');void p.offsetWidth;p.classList.add('sh')}
 function render(){if(qz){rq();return}
+ NC=near();nk=NC?NC.k:'';
  let h=msg?`<p>${msg}</p>`:'';
  $('#st').textContent=cur<4?`Bước ${cur+1}/4`:cur==4?'Lưu ý':'Kết quả';
+ const nb=()=>NC&&NC.a.length?'<div class="row">'+NC.a.map((x,i)=>`<button class="btn pri" data-a="act" data-v="${i}">${x[0]}</button>`).join('')+'</div>':'<p><small>Đi bằng phím WASD hoặc mũi tên (hoặc bấm vào mặt đất). Nhấn giữ chuột trái và kéo để xoay góc nhìn, cuộn chuột để phóng to, thu nhỏ. Đứng gần vật để thao tác, phím E là thao tác nhanh.</small></p>';
  if(cur<4&&phase=='pick'){
-  if(!msg)h+='<p>Chọn <b>bước tiếp theo</b> đúng thứ tự gieo hạt. <small>Kéo màn hình 3D để xoay.</small></p>';
+  if(!msg)h+='<p>Chọn <b>bước tiếp theo</b> đúng thứ tự gieo hạt:</p>';
   h+='<div class="cards">'+order.map(i=>`<button class="c" data-a="pick" data-v="${i}" ${done.has(i)?'disabled':''}>${done.has(i)?`✔ Bước ${i+1}. `:''}${ST[i]}</button>`).join('')+'</div>';
  }else if(cur==0){
-  h+='<p><b>Bước 1.</b> Chạm vào các vật dụng cần thiết trong cảnh 3D (chậu đã có sẵn). Cẩn thận, có đồ không cần dùng!</p><p>'+REQ.map(k=>`<span class="${got.has(k)?'good':''}">${got.has(k)?'✔':'○'} ${IT[k].userData.name}</span>`).join(' &nbsp; ')+'</p>'+(got.size==5?'<button class="btn pri" data-a="next">Xong bước 1</button>':'');
+  h+='<p><b>Bước 1.</b> Điều khiển bạn nhỏ đi tìm các vật dụng cần thiết trong vườn. Cẩn thận, có đồ không cần dùng!</p><p>'+REQ.map(k=>`<span class="${got.has(k)?'good':''}">${got.has(k)?'✔':'○'} ${NM[k]}</span>`).join(' &nbsp; ')+'</p>'+nb()+(got.size==5?'<button class="btn pri" data-a="go">Xong bước 1</button>':'');
  }else if(cur==1){
   const c=cmv(),ok=c>=1.99&&c<=5.01;
-  h+=`<p><b>Bước 2.</b> Xúc giá thể vào chậu đến khi giá thể cách miệng chậu <b>từ 2 cm đến 5 cm</b> (vùng xanh trong chậu).</p><p>Cách miệng chậu: <span class="${ok?'good':'bad'}">${c.toFixed(1)} cm</span></p><div class="row"><button class="btn" data-a="scoop">🥄 Xúc thêm</button><button class="btn" data-a="less">Xúc bớt</button><button class="btn pri" data-a="doneSoil">Xong</button></div>`;
+  h+=`<p><b>Bước 2.</b> Cầm xẻng múc giá thể ở bao rồi đổ vào chậu, đến khi giá thể cách miệng chậu <b>từ 2 cm đến 5 cm</b> (vùng xanh). Đầy quá thì múc bớt ra.</p><p>Cách miệng chậu: <span class="${ok?'good':'bad'}">${c.toFixed(1)} cm</span> · Xẻng: ${loaded?'<b>đầy giá thể</b>':'trống'}</p>`+nb()+'<button class="btn pri" data-a="doneSoil">Xong bước 2</button>';
  }else if(cur==2){
-  if(sub=='q')h+='<p><b>Bước 3.</b> Trước khi gieo, em xử lí hạt giống thế nào cho đúng?</p><div class="cards">'+[1,0,2].map(i=>`<button class="c" data-a="ans" data-v="${i}">${Q[i]}</button>`).join('')+'</div>';
-  else h+=`<p><b>Bước 3.</b> Chạm vào mặt giá thể để đặt hạt (ít nhất 6 hạt, tối đa 14). Đã gieo: <b>${seeds.length}</b></p><button class="btn pri" data-a="cover">Lấp kín hạt bằng lớp giá thể mỏng</button>`;
+  if(sub=='mix')h+=`<p><b>Bước 3.</b> Xử lí hạt giống: pha nước ấm gồm <b>2 phần nước sôi + 3 phần nước lạnh</b>. Đi tới ấm nước và xô nước để rót.</p><p>Nước sôi: <b class="${hot>2?'bad':''}">${hot}/2</b> · Nước lạnh: <b class="${cold>3?'bad':''}">${cold}/3</b></p>`+nb();
+  else if(sub=='soak')h+='<p>Hạt đã nằm trong bát nước ấm. Bấm hoàn thành để ngâm hạt.</p><button class="btn pri" data-a="soakdone">✔ Hoàn thành, ngâm 2 giờ</button>';
+  else if(sub=='take')h+='<p>Đi tới bát nước ngâm hạt.</p>'+nb();
+  else if(sub=='sow')h+=`<p>Mang hạt tới chậu và gieo (ít nhất 6 hạt, tối đa 14 hạt). Đã gieo: <b>${seeds.length}</b></p>`+nb()+(seeds.length>=6?'<button class="btn pri" data-a="sowdone">Gieo xong, lấp giá thể</button>':'');
+  else h+='<p>Cầm xẻng múc giá thể ở bao, rồi phủ một lớp <b>mỏng</b> lên hạt trong chậu.</p>'+nb();
  }else if(cur==3){
-  h+='<p><b>Bước 4.</b> Nhấn giữ nút để tưới nhẹ (dạng phun sương). Dừng lại khi thanh nằm trong khung xanh. Mỗi ngày tưới một đến hai lần vào sáng sớm và chiều mát.</p><div class="bar"><i id="mb"></i><b></b></div><p id="mt"></p><div class="row"><button class="btn" data-hold="1" style="touch-action:none">💧 Nhấn giữ để phun sương</button><button class="btn pri" data-a="doneWater">Xong</button></div>';
+  h+=`<p><b>Bước 4.</b> Đứng gần chậu, nhấn giữ nút (hoặc giữ phím E) để phun sương từng chút một. Dừng khi thanh nằm trong khung xanh, đừng để úng nước!</p><div class="bar"><i id="mb" style="width:${moist*.8}%"></i><b></b></div><p id="mt">${wtxt()}</p><div class="row">`+(NC?'<button class="btn" data-hold="1" style="touch-action:none">💧 Nhấn giữ để phun sương</button>':'<small>Hãy đi lại gần chậu.</small>')+'<button class="btn pri" data-a="doneWater">Xong bước 4</button></div>';
  }else if(cur==4){
   h+='<p><b>Lưu ý.</b> Đảm bảo an toàn lao động và vệ sinh môi trường: thu dọn dụng cụ, vệ sinh sạch sẽ sau khi gieo hạt.</p><button class="btn pri" data-a="clean">🧹 Thu dọn dụng cụ và rửa tay</button>';
  }else if(grow<2)h+='<p>⏳ Vài ngày sau… <b id="day">Ngày 1</b></p>';
  else{
   const f=n=>n==0?'😄':n==1?'😊':'😟',tot=Object.values(F).reduce((a,b)=>a+b,0),st=tot<=1?3:tot<=4?2:1;
-  h+='<p><b>Phiếu đánh giá sản phẩm</b></p><table>'+[['Giá thể cách miệng chậu từ 2 cm đến 5 cm',F.soil],['Hạt được lấp kín bởi một lớp giá thể mỏng',F.seed],['Giá thể được tưới đủ ẩm',F.water],['Vệ sinh sạch sẽ sau thực hành',F.clean],['Đảm bảo an toàn lao động',F.safe]].map(r=>`<tr><td>${r[0]}</td><td>${f(r[1])}</td></tr>`).join('')+`</table><p>${'⭐'.repeat(st)} Hạt đã nảy mầm! Hãy tiếp tục theo dõi, chăm sóc cây theo hướng dẫn của giáo viên.</p><div class="row"><button class="btn pri" data-a="quiz">📝 Ôn bài (7 câu)</button><button class="btn" onclick="location.reload()">Chơi lại</button></div>`;
+  h+='<p><b>Phiếu đánh giá sản phẩm</b></p><table>'+[['Giá thể cách miệng chậu từ 2 cm đến 5 cm',F.soil],['Pha nước ấm ngâm hạt đúng tỉ lệ',F.mix],['Hạt gieo vừa phải, được lấp kín bởi lớp giá thể mỏng',F.seed],['Giá thể được tưới đủ ẩm',F.water],['Vệ sinh sạch sẽ sau thực hành',F.clean],['Đảm bảo an toàn lao động',F.safe]].map(r=>`<tr><td>${r[0]}</td><td>${f(r[1])}</td></tr>`).join('')+`</table><p>${'⭐'.repeat(st)} Hạt đã nảy mầm! Hãy tiếp tục theo dõi, chăm sóc cây theo hướng dẫn của giáo viên.</p><div class="row"><button class="btn pri" data-a="quiz">📝 Ôn bài (7 câu)</button><button class="btn" onclick="location.reload()">Chơi lại</button></div>`;
  }
- $('#panel').innerHTML=h;
-}
-function shake(){const p=$('#panel');p.classList.remove('sh');void p.offsetWidth;p.classList.add('sh')}
-function go(){cur++;phase=cur<4?'pick':'do';msg=cur<4?'✅ Tuyệt! Giờ hãy chọn bước tiếp theo:':'';hold();band.visible=false;if(cur==5){grow=0;sp.visible=true;sp.position.y=.2+lv;seeds.forEach(s=>s.visible=false)}render()}
-const A={
- pick(i){i=+i;if(i==cur){done.add(i);phase='do';msg='';sub='q';if(cur==1){hold('xeng');band.visible=true}if(cur==2)hold('hat');if(cur==3)hold('binh');render()}else{F.safe++;msg='❌ Chưa đúng. Gợi ý: '+HINT[cur];shake();render()}},
- next(){go()},
- scoop(){if(lv>=1.8)return;lv=+(lv+.2).toFixed(2);setSoil();puff(mSoil,14,.6,3.4);render()},
- less(){if(lv<=0)return;lv=+(lv-.2).toFixed(2);F.clean++;setSoil();render()},
- doneSoil(){const c=cmv();if(c>=1.99&&c<=5.01)go();else{F.soil++;msg=c<2?'❌ Giá thể quá đầy, hãy xúc bớt (cần cách miệng chậu 2 đến 5 cm).':'❌ Giá thể còn ít, hãy xúc thêm cho đến vùng xanh.';shake();render()}},
- ans(v){if(v==0){sub='sow';msg='✅ Đúng rồi! Hạt đã xử lí xong.'}else{F.seed++;msg='❌ Chưa đúng. Hạt cần được ngâm nước ấm (2 phần nước sôi + 3 phần nước lạnh) 2 đến 5 giờ.';shake()}render()},
- cover(){if(seeds.length<6){F.seed++;msg='❌ Hãy gieo ít nhất 6 hạt trước khi lấp.';shake();render();return}seeds.forEach(s=>s.visible=false);cov.visible=true;cov.position.y=.1+lv+.05;puff(mSoil,12,1.8,2.6);go()},
+ $('#panel').innerHTML=h}
+const A={go,
+ pick(i){i=+i;if(i==cur){done.add(i);phase='do';msg='';if(cur==1){setHeld('xeng');band.visible=true}if(cur==2){sub='mix';setHeld(null)}if(cur==3)setHeld('binh');render()}else{F.safe++;msg='❌ Chưa đúng. Gợi ý: '+HINT[cur];shake();render()}},
+ act(i){const o=near();if(o&&o.a[i||0])o.a[i||0][1]()},
+ soakdone:timelapse,
+ sowdone(){if(seeds.length>10){F.seed++;msg='Hạt hơi dày, lần sau gieo thưa hơn nhé.'}else msg='';sub='cover';setHeld('xeng');loaded=false;render()},
+ doneSoil(){const c=cmv();if(c>=1.99&&c<=5.01)go();else{F.soil++;msg=c<2?'❌ Giá thể quá đầy, hãy múc bớt (cần cách miệng chậu 2 đến 5 cm).':'❌ Giá thể còn ít, hãy múc thêm cho đến vùng xanh.';shake();render()}},
  doneWater(){if(moist<60){F.water++;msg='❌ Giá thể chưa đủ ẩm, hãy tưới thêm.';shake();render()}else{if(moist>95)F.water++;go()}},
- clean(){go()}
-};
-Object.assign(A,{quiz(){qz={i:0,s:0,f:'',o:QZ.map(q=>q[1].map((_,i)=>i).sort(()=>Math.random()-.5))};rq()},qans(v){if(qz.f)return;if(v==0){qz.s++;qz.f='✅ Chính xác!'}else qz.f='❌ Chưa đúng. Đáp án đúng: '+QZ[qz.i][1][0];rq()},qnext(){qz.i++;qz.f='';rq()}});
-function tap(id){if(got.has(id))return;const o=IT[id];if(REQ.includes(id)){got.add(id);o.scale.setScalar(.85);o.userData.tgt=rack(got.size-1);msg='✔ Đã lấy: '+o.userData.name}else{F.safe++;msg='❌ '+o.userData.name+' không cần dùng ở đây.';shake()}render()}
-const RC=new T.Raycaster(),P=new T.Vector2();
-function pickAt(e){if(phase!='do')return;const r=R.domElement.getBoundingClientRect();P.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);RC.setFromCamera(P,C);
- if(cur==0){const h=RC.intersectObjects(Object.values(IT),true)[0];if(h){let o=h.object;while(!o.userData.id)o=o.parent;tap(o.userData.id)}}
- else if(cur==2&&sub=='sow'&&seeds.length<14){const h=RC.intersectObject(soil)[0];if(h&&h.face.normal.y>.9){const s=mk(new T.SphereGeometry(.09,10,8),M(0xf1d27a),h.point.x,h.point.y+.04,h.point.z);s.scale.set(1.3,.7,1);seeds.push(s);render()}}}
-function hover(e){const t=$('#tip');if(cur!=0||phase!='do'||e.pointerType=='touch'){t.style.display='none';cv.style.cursor='';return}
- const r=cv.getBoundingClientRect();P.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);RC.setFromCamera(P,C);
- const h=RC.intersectObjects(Object.values(IT),true)[0];if(!h){t.style.display='none';cv.style.cursor='';return}
- let o=h.object;while(!o.userData.id)o=o.parent;const n=o.userData.name;
- t.textContent=n[0].toUpperCase()+n.slice(1)+(got.has(o.userData.id)?' ✔':'');t.style.left=e.clientX-r.left+'px';t.style.top=e.clientY-r.top+'px';t.style.display='block';cv.style.cursor='pointer'}
-const cv=R.domElement;let dn=null;
-cv.addEventListener('pointerleave',()=>{$('#tip').style.display='none'});
-cv.addEventListener('pointerdown',e=>{dn={x:e.clientX,y:e.clientY,yaw,pit};cv.setPointerCapture(e.pointerId)});
-cv.addEventListener('pointermove',e=>{if(!dn){hover(e);return}$('#tip').style.display='none';yaw=dn.yaw-(e.clientX-dn.x)*.008;pit=Math.max(.15,Math.min(1.3,dn.pit+(e.clientY-dn.y)*.006));cam()});
-cv.addEventListener('pointerup',e=>{if(dn&&Math.hypot(e.clientX-dn.x,e.clientY-dn.y)<6)pickAt(e);dn=null});
-cv.addEventListener('wheel',e=>{dist=Math.max(7,Math.min(20,dist+e.deltaY*.01));cam()},{passive:true});
+ clean(){go()},
+ quiz(){qz={i:0,s:0,f:'',o:QZ.map(q=>q[1].map((_,i)=>i).sort(()=>Math.random()-.5))};rq()},
+ qans(v){if(qz.f)return;if(v==0){qz.s++;qz.f='✅ Chính xác!'}else qz.f='❌ Chưa đúng. Đáp án đúng: '+QZ[qz.i][1][0];rq()},
+ qnext(){qz.i++;qz.f='';rq()}};
+// điều khiển
+const keys={},cv=R.domElement,RC=new T.Raycaster(),P2=new T.Vector2(),PL=new T.Plane(V(0,1,0),0),pt=V(0,0,0);
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k.startsWith('arrow'))e.preventDefault();keys[k]=true;if(k=='e'){if(cur==3)hd=true;else if(!e.repeat)A.act(0)}});
+addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(k=='e')hd=false});
+let dn=null;
+cv.addEventListener('pointerdown',e=>{if(e.button!==0)return;dn={x:e.clientX,y:e.clientY,yaw,pit,m:false};cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',e=>{if(!dn)return;const mx=e.clientX-dn.x,my=e.clientY-dn.y;if(Math.hypot(mx,my)>6)dn.m=true;if(dn.m){yaw=dn.yaw-mx*.006;pit=Math.max(.2,Math.min(1.35,dn.pit+my*.005))}});
+cv.addEventListener('pointercancel',()=>dn=null);
+cv.addEventListener('pointerup',e=>{if(!dn)return;const d=dn;dn=null;if(d.m||busy)return;const r=cv.getBoundingClientRect();P2.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);RC.setFromCamera(P2,C);if(RC.ray.intersectPlane(PL,pt))goal=V(Math.max(-14,Math.min(14,pt.x)),0,Math.max(-7,Math.min(14,pt.z)))});
+cv.addEventListener('wheel',e=>{e.preventDefault();dist=Math.max(6,Math.min(28,dist+e.deltaY*.01))},{passive:false});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&!b.disabled)A[b.dataset.a](b.dataset.v)});
 document.addEventListener('pointerdown',e=>{if(e.target.closest('[data-hold]'))hd=true});
 addEventListener('pointerup',()=>hd=false);addEventListener('pointercancel',()=>hd=false);
 document.addEventListener('contextmenu',e=>e.preventDefault());
 addEventListener('resize',size);
-const dry=new T.Color(0xa9794a),wet=new T.Color(0x4a2f1c);let last=0;
-function loop(t){requestAnimationFrame(loop);const dt=Math.min((t-last)/1000,.05);last=t;
- for(const k in IT){const o=IT[k];o.position.lerp(o.userData.tgt,.1);if(!got.has(k)&&cur==0)o.rotation.y+=.01}
- if(hd&&cur==3&&phase=='do'){moist=Math.min(125,moist+dt*28);puff(mWat,2,1.6,3.6);mS.color.copy(dry).lerp(wet,Math.min(1,moist/100));
-  const b=$('#mb');if(b){b.style.width=moist*.8+'%';$('#mt').innerHTML=moist<60?'Giá thể còn khô, hãy tưới thêm.':moist<=95?'<span class="good">Đủ ẩm rồi! Có thể bấm Xong.</span>':'<span class="bad">Quá nhiều nước, giá thể bị úng!</span>'}}
- for(let i=PT.length-1;i>=0;i--){const o=PT[i];o.position.add(o.userData.v);o.userData.v.y-=.004;if(o.position.y<.15+(soil.visible?lv:0)){S.remove(o);PT.splice(i,1)}}
- if(cur==5&&grow>=0&&grow<1){grow=Math.min(1,grow+dt/4.5);const s=.3+.7*grow;sp.scale.set(s,Math.max(grow,.01),s);const d=$('#day');if(d)d.textContent='Ngày '+Math.max(1,Math.ceil(grow*7));if(grow>=1){grow=2;render()}}
+const dry=new T.Color(0xa9794a),wet=new T.Color(0x4a2f1c),cp=V(0,0,5);let last=0,ph=0,yaw=0,pit=.69,dist=15;
+function loop(t){requestAnimationFrame(loop);const dt=Math.min((t-last)/1000,.05);last=t;const p=hero.position;
+ let f=0,r=0;if(keys.w||keys.arrowup)f++;if(keys.s||keys.arrowdown)f--;if(keys.a||keys.arrowleft)r--;if(keys.d||keys.arrowright)r++;let dx=-Math.sin(yaw)*f+Math.cos(yaw)*r,dz=-Math.cos(yaw)*f-Math.sin(yaw)*r;
+ if(dx||dz)goal=null;else if(goal){dx=goal.x-p.x;dz=goal.z-p.z;if(Math.hypot(dx,dz)<.15){goal=null;dx=dz=0}}
+ const mv=!busy&&(dx||dz);
+ if(mv){const l=Math.hypot(dx,dz);dx/=l;dz/=l;p.x=Math.max(-14,Math.min(14,p.x+dx*6*dt));p.z=Math.max(-7,Math.min(14,p.z+dz*6*dt));hero.rotation.y=Math.atan2(dx,dz);const d=Math.hypot(p.x,p.z)||.001;if(d<2.4){p.x=p.x/d*2.4;p.z=p.z/d*2.4}}
+ if(mv)ph+=dt*10;const s=mv?Math.sin(ph)*.7:0;legL.rotation.x=s;legR.rotation.x=-s;armL.rotation.x=-s;armR.rotation.x=held?-1:s;
+ if(hsc)hsc.visible=loaded;
+ const n=near();NC=n;const k=n?n.k:'';if(k!==nk){nk=k;render()}
+ if(cur==3&&phase=='do'&&hd&&n&&!busy){moist=Math.min(125,moist+dt*24);spray();hero.rotation.y=Math.atan2(-p.x,-p.z);mS.color.copy(dry).lerp(wet,Math.min(1,moist/100));const b=$('#mb');if(b){b.style.width=moist*.8+'%';$('#mt').innerHTML=wtxt()}}
+ if(cur==0)for(const id in IT)IT[id].rotation.y+=.02;
+ for(let i=PT.length-1;i>=0;i--){const o=PT[i];o.position.add(o.userData.v);o.userData.v.y-=o.userData.g===undefined?.004:o.userData.g;if(o.position.y<.15+(soil.visible?lv:0)){S.remove(o);PT.splice(i,1)}}
+ if(cur==5&&grow>=0&&grow<1){grow=Math.min(1,grow+dt/4.5);const q=.3+.7*grow;sp.scale.set(q,Math.max(grow,.01),q);const d=$('#day');if(d)d.textContent='Ngày '+Math.max(1,Math.ceil(grow*7));if(grow>=1){grow=2;render()}}
+ cp.lerp(p,.08);C.position.set(cp.x+Math.sin(yaw)*Math.cos(pit)*dist,Math.sin(pit)*dist,cp.z+Math.cos(yaw)*Math.cos(pit)*dist);C.lookAt(cp.x,1.4,cp.z);
+ const tp=$('#tip');if(n&&!busy){const v=n.p.clone();v.y=2.2;v.project(C);tp.style.left=(v.x*.5+.5)*cv.clientWidth+'px';tp.style.top=(-v.y*.5+.5)*cv.clientHeight+'px';tp.textContent=n.n;tp.style.display='block'}else tp.style.display='none';
  R.render(S,C)}
 size();setSoil();render();requestAnimationFrame(loop);
 </script></body></html>
